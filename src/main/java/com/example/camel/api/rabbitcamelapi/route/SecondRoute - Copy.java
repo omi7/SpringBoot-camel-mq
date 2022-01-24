@@ -1,11 +1,6 @@
 package com.example.camel.api.rabbitcamelapi.route;
 
-import com.example.camel.api.rabbitcamelapi.model.ConversionProcessor;
-import com.example.camel.api.rabbitcamelapi.model.ConversionProcessorForMqMsg;
-import com.example.camel.api.rabbitcamelapi.model.CreateEmployeeProcessor;
 import com.example.camel.api.rabbitcamelapi.model.Employee;
-import org.apache.camel.Exchange;
-import org.apache.camel.Processor;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -24,9 +19,6 @@ public class SecondRoute extends RouteBuilder {
 
     @Autowired
     ConversionProcessorForMqMsg conversionProcessorForMqMsg;
-
-    @Autowired
-    CreateEmployeeProcessor createEmployeeProcessor;
 
     /**
      * route with rabbitmq server running
@@ -66,15 +58,35 @@ public class SecondRoute extends RouteBuilder {
         restConfiguration().host("localhost").port(8080);
         JacksonDataFormat jsonDataFormat = new JacksonDataFormat(Employee.class);
 
-        from("direct:startRabbitMQPoint").id("1").unmarshal().json(JsonLibrary.Jackson, Employee.class)
+        from("direct:startRabbitMQPoint").id("1").marshal(jsonDataFormat)
                 .bean(conversionProcessorForMqMsg)
                 .log("${body}")
-                .bean(createEmployeeProcessor)
-                .log("${body}")
+                .setBody(Exchange)
                 .to("rest:post:/addEmployee");
     }
 }
 
 
 
+@Component
+class ConversionProcessorForMqMsg{
 
+    Logger logger = LogManager.getLogger(ConversionProcessor.class);
+    public Employee process(Employee employee){
+        employee.setName(employee.getName().toUpperCase());
+        logger.info("==employee name in UPPERCASE=="+ employee.getName());
+        employee.setLastName(employee.getLastName().toUpperCase());
+        logger.info("==employee lastName in UPPERCASE=="+ employee.getLastName());
+        return employee;
+    }
+}
+
+@Component
+class ConversionProcessor{
+
+    Logger logger = LogManager.getLogger(ConversionProcessor.class);
+    public String process(String employeeName){
+        logger.info("=emp name in UPPERCASE==>"+ employeeName.toUpperCase());
+        return employeeName.toUpperCase();
+    }
+}
